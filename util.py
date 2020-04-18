@@ -1,3 +1,4 @@
+
 class Node():
     def __init__(self, state, parent, action):
         self.state = state
@@ -9,7 +10,7 @@ class StackFrontier():
     def __init__(self):
         self.frontier = []
 
-    def add(self, node):
+    def add(self, node: object) -> object:
         self.frontier.append(node)
 
     def contains_state(self, state):
