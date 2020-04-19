@@ -162,6 +162,8 @@ def minimax(board):
     """
     Returns the optimal action for the current player on the board.
     """
+    if board == initial_state():
+        return(1,1)
     if terminal(board):
         return None
 
