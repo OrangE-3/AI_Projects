@@ -1,5 +1,8 @@
 import itertools
 import random
+from copy import deepcopy
+
+go = [(0, 1), (1, 1), (1, 0), (0, -1), (-1, 0), (-1, -1), (1, -1), (-1, 1)]
 
 
 class Minesweeper():
@@ -105,27 +108,46 @@ class Sentence():
         """
         Returns the set of all cells in self.cells known to be mines.
         """
-        raise NotImplementedError
+        if len(self.cells) == self.count:
+            return self.cells
+        else:
+            a = set()
+            return a
+
+        # raise NotImplementedError
 
     def known_safes(self):
         """
         Returns the set of all cells in self.cells known to be safe.
         """
-        raise NotImplementedError
+        if self.count == 0:
+            return self.cells
+        else:
+            a = set()
+            return a
+
+        # raise NotImplementedError
 
     def mark_mine(self, cell):
         """
         Updates internal knowledge representation given the fact that
         a cell is known to be a mine.
         """
-        raise NotImplementedError
+        if cell in self.cells:
+            self.cells.remove(cell)
+            self.count -= 1
+
+        # raise NotImplementedError
 
     def mark_safe(self, cell):
         """
         Updates internal knowledge representation given the fact that
         a cell is known to be safe.
         """
-        raise NotImplementedError
+        if cell in self.cells:
+            self.cells.remove(cell)
+
+        # raise NotImplementedError
 
 
 class MinesweeperAI():
@@ -182,7 +204,100 @@ class MinesweeperAI():
             5) add any new sentences to the AI's knowledge base
                if they can be inferred from existing knowledge
         """
-        raise NotImplementedError
+        self.moves_made.add(cell)
+        self.mark_safe(cell)
+        lis = set()
+        for x in go:
+            a = cell[0] + x[0]
+            b = cell[1] + x[1]
+            c = (a, b)
+            if (0 <= c[0] < self.height) and (0 <= c[1] < self.width):
+                if (c not in self.safes) and (c not in self.mines):
+                    lis.add(c)
+                if c in self.mines:
+                    count-=1
+
+        s = Sentence(lis, min(count, len(lis)))
+        if len(lis)>0:
+            self.knowledge.append(s)
+            while True:
+                can=False
+                for sent in self.knowledge:
+                    a1 = deepcopy(sent.known_mines())
+                    a2 = deepcopy(sent.known_safes())
+
+                    if len(a1) !=0 or len(a2)!=0:
+                        can=True
+
+                    for x in a1:
+                        self.mark_mine(x)
+                    for x in a2:
+                        self.mark_safe(x)
+                if can is False:
+                    break
+        res = []
+        [res.append(x) for x in self.knowledge if x not in res]
+        self.knowledge=deepcopy(res)
+
+        preng=[]
+        while True:
+            n = len(self.knowledge)
+            ng=[]
+            for i in range(n):
+                for j in range(n):
+                    a = self.knowledge[i].cells
+                    b = self.knowledge[j].cells
+                    if (a==b) or (len(a)==0) or (len(b)==0):
+                        continue
+                    c = a | b
+                    if c == a:
+                        d = a - b
+                        cc = self.knowledge[i].count - self.knowledge[j].count
+                        s = Sentence(d, min(cc, len(d)))
+                        ng.append(s)
+                    elif c==b:
+                        d = b - a
+                        cc = self.knowledge[j].count - self.knowledge[i].count
+                        s = Sentence(d, min(cc, len(d)))
+                        ng.append(s)
+
+            if (len(ng)==0) or (preng==ng):
+                break
+
+            preng=deepcopy(ng)
+            for i in ng:
+                self.knowledge.append(i)
+            res = []
+            [res.append(x) for x in self.knowledge if x not in res]
+            self.knowledge = deepcopy(res)
+
+
+            while True:
+                can = False
+                for sent in self.knowledge:
+                    a1 = deepcopy(sent.known_mines())
+                    a2 = deepcopy(sent.known_safes())
+
+                    if (len(a1) != 0) or (len(a2) != 0):
+                        can = True
+
+                    for x in a1:
+                        self.mark_mine(x)
+                    for x in a2:
+                        self.mark_safe(x)
+                if can is False:
+                    break
+
+            res = []
+            [res.append(x) for x in self.knowledge if x not in res]
+            self.knowledge = deepcopy(res)
+
+        res = []
+        [res.append(x) for x in self.knowledge if x not in res]
+        self.knowledge = deepcopy(res)
+
+
+        # raise NotImplementedError
 
     def make_safe_move(self):
         """
@@ -193,7 +308,14 @@ class MinesweeperAI():
         This function may use the knowledge in self.mines, self.safes
         and self.moves_made, but should not modify any of those values.
         """
-        raise NotImplementedError
+        if len(self.safes) == 0:
+            return None
+
+        for x in self.safes:
+            if x not in self.moves_made:
+                return x
+
+        # raise NotImplementedError
 
     def make_random_move(self):
         """
@@ -202,4 +324,16 @@ class MinesweeperAI():
             1) have not already been chosen, and
             2) are not known to be mines
         """
-        raise NotImplementedError
+        s = []
+        for i in range(self.height):
+            for j in range(self.width):
+                a = (i, j)
+                if (a not in self.moves_made) and (a not in self.mines):
+                    s.append(a)
+
+        if len(s) == 0:
+            return None
+
+        return random.choice(s)
+
+        # raise NotImplementedError
