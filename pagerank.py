@@ -2,6 +2,7 @@ import os
 import random
 import re
 import sys
+import copy
 
 DAMPING = 0.85
 SAMPLES = 10000
@@ -57,7 +58,24 @@ def transition_model(corpus, page, damping_factor):
     linked to by `page`. With probability `1 - damping_factor`, choose
     a link at random chosen from all pages in the corpus.
     """
-    raise NotImplementedError
+   #raise NotImplementedError
+    a= list(corpus[page])
+    n=len(a)
+    res={}
+    b=set()
+    m=len(corpus)
+    for x in a:
+        res[x]= float(float(damping_factor) / float(n))
+        b.add(x)
+    if n==0:
+        for x in corpus:
+            res[x]=float(float(1)/float(m))
+    else:
+        for x in corpus:
+            if x not in b:
+                res[x]=float(float(1-damping_factor)/float(m-n))
+
+    return res
 
 
 def sample_pagerank(corpus, damping_factor, n):
@@ -69,7 +87,31 @@ def sample_pagerank(corpus, damping_factor, n):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
+    res={}
+    for x in corpus:
+        res[x]=0
+
+    start= random.choice(list(corpus.keys()))
+    res[start]+=1
+    now= copy.deepcopy(start)
+    for i in range(n-1):
+        gett= transition_model(corpus,now,damping_factor)
+        {k: v for k, v in sorted(gett.items(), key=lambda item: item[1])}
+        num=random.random()
+        total=0
+        for k, v in gett.items():
+            total += v
+            if num <= total:
+                now=k
+                break
+        res[now]+=1
+
+    for x in res:
+        res[x]=float(float(res[x])/float(n))
+
+    return res
+
+   # raise NotImplementedError
 
 
 def iterate_pagerank(corpus, damping_factor):
@@ -81,7 +123,42 @@ def iterate_pagerank(corpus, damping_factor):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
+ #   raise NotImplementedError
+    invcorpus={}
+    for x in corpus:
+        invcorpus[x]=set()
+    for x,v in corpus.items():
+        for y in v:
+            invcorpus[y].add(x)
+
+    prev={}
+    now={}
+    for x in corpus:
+        prev[x]=float(float(1)/float(len(corpus)))
+    n=len(corpus)
+
+    while True:
+        can=False
+        for x in corpus:
+            now[x]= float(float(1-damping_factor)/float(n))
+            rem=0
+            for y in invcorpus[x]:
+                if len(corpus[y])==0:
+                    rem = rem + float(float(prev[y])/float(n))
+                else:
+                    rem = rem + float(float(prev[y])/float(len(corpus[y])))
+            now[x]= now[x] + float(damping_factor*rem)
+            if abs(float(now[x]-prev[x]))>float(0.001):
+
+                can=True
+
+        if can==False:
+            break
+
+        for x in prev:
+            prev[x]=now[x]
+
+    return now
 
 
 if __name__ == "__main__":
