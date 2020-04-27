@@ -1,5 +1,5 @@
 import sys
-
+import copy
 from crossword import *
 
 
@@ -14,6 +14,7 @@ class CrosswordCreator():
             var: self.crossword.words.copy()
             for var in self.crossword.variables
         }
+        self.ans = []
 
     def letter_grid(self, assignment):
         """
@@ -99,7 +100,15 @@ class CrosswordCreator():
         (Remove any values that are inconsistent with a variable's unary
          constraints; in this case, the length of the word.)
         """
-        raise NotImplementedError
+        for x, v in self.domains.items():
+            temp = set()
+            for y in v:
+                if len(y) is not x.length:
+                    temp.add(y)
+            for y in temp:
+                self.domains[x].remove(y)
+
+        # raise NotImplementedError
 
     def revise(self, x, y):
         """
@@ -110,7 +119,26 @@ class CrosswordCreator():
         Return True if a revision was made to the domain of `x`; return
         False if no revision was made.
         """
-        raise NotImplementedError
+        index = self.crossword.overlaps[x, y]
+        if index is None:
+            return False
+        else:
+            temp = set()
+            for word in self.domains[x]:
+                invalid=True
+                for cc in self.domains[y]:
+                    if word[index[0]] is cc[index[1]]:
+                        invalid=False
+                if invalid is True:
+                    temp.add(word)
+            if len(temp) == 0:
+                return False
+            else:
+                for go in temp:
+                    self.domains[x].remove(go)
+                return True
+
+        # raise NotImplementedError
 
     def ac3(self, arcs=None):
         """
@@ -121,21 +149,62 @@ class CrosswordCreator():
         Return True if arc consistency is enforced and no domains are empty;
         return False if one or more domains end up empty.
         """
-        raise NotImplementedError
+        if arcs is None:
+            arcs=[]
+            for v in self.crossword.variables:
+                for ne in self.crossword.neighbors(v):
+                    if ne is v:
+                        continue
+                    arcs.append((v,ne))
+
+        while len(arcs)>0:
+            now=arcs.pop(0)
+            if self.revise(now[0],now[1]) is True:
+                if len(self.domains[now[0]])==0:
+                    return False
+                for ne in self.crossword.neighbors(now[0]):
+                    if ne is now[1]:
+                        continue
+                    arcs.append((ne,now[0]))
+        return True
+        # raise NotImplementedError
 
     def assignment_complete(self, assignment):
         """
         Return True if `assignment` is complete (i.e., assigns a value to each
         crossword variable); return False otherwise.
         """
-        raise NotImplementedError
+
+        for v in self.crossword.variables:
+            if v not in assignment:
+                return False
+
+        return True
+        # raise NotImplementedError
 
     def consistent(self, assignment):
         """
         Return True if `assignment` is consistent (i.e., words fit in crossword
         puzzle without conflicting characters); return False otherwise.
         """
-        raise NotImplementedError
+        curr = set()
+        for v, w in assignment.items():
+            if v.length is not len(w):
+                return False
+            if w in curr:
+                return False
+            for ne in self.crossword.neighbors(v):
+                if ne not in assignment:
+                    continue
+                else:
+                    ind = self.crossword.overlaps[v, ne]
+                    if w[ind[0]] is not assignment[ne][ind[1]]:
+                        return False
+            curr.add(w)
+
+        return True
+
+        # raise NotImplementedError
 
     def order_domain_values(self, var, assignment):
         """
@@ -144,7 +213,24 @@ class CrosswordCreator():
         The first value in the list, for example, should be the one
         that rules out the fewest values among the neighbors of `var`.
         """
-        raise NotImplementedError
+        lis = []
+
+        for word in self.domains[var]:
+            t = 0
+            for ne in self.crossword.neighbors(var):
+                if ne in assignment:
+                    continue
+                if word in self.domains[ne]:
+                    t += 1
+            lis.append((t, word))
+
+        lis.sort()
+        ans = []
+        for v in lis:
+            ans.append(v[1])
+        return ans
+
+        # raise NotImplementedError
 
     def select_unassigned_variable(self, assignment):
         """
@@ -154,7 +240,22 @@ class CrosswordCreator():
         degree. If there is a tie, any of the tied variables are acceptable
         return values.
         """
-        raise NotImplementedError
+        a=999999
+        b=-1
+        c=Variable(-1,-1,-1,-1)
+        for v in self.crossword.variables:
+            if v not in assignment:
+                if len(self.domains[v])<a:
+                    a=len(self.domains[v])
+                    b=(len(self.crossword.neighbors(v)))
+                    c=v
+                elif len(self.domains[v]) == a:
+                    if (len(self.crossword.neighbors(v)))>b:
+                        b = (len(self.crossword.neighbors(v)))
+                        c = v
+
+        return c
+        # raise NotImplementedError
 
     def backtrack(self, assignment):
         """
@@ -165,11 +266,34 @@ class CrosswordCreator():
 
         If no assignment is possible, return None.
         """
-        raise NotImplementedError
+        self.trackhelp(assignment)
+        if len(self.ans) == 0:
+            return None
+        else:
+            return self.ans[0]
+
+    def trackhelp(self, assignment):
+        if len(self.ans)==1:
+            return
+
+        if self.assignment_complete(assignment) is True:
+            k=copy.deepcopy(assignment)
+            self.ans.append(k)
+            return
+
+        v = self.select_unassigned_variable(assignment)
+        go = self.order_domain_values(v, assignment)
+
+        for word in go:
+            assignment[v] = word
+            if self.consistent(assignment):
+                self.trackhelp(assignment)
+            del assignment[v]
+
+        # raise NotImplementedError
 
 
 def main():
-
     # Check usage
     if len(sys.argv) not in [3, 4]:
         sys.exit("Usage: python generate.py structure words [output]")
