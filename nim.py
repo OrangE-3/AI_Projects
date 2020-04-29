@@ -5,7 +5,7 @@ import time
 
 class Nim():
 
-    def __init__(self, initial=[1, 3, 5, 7]):
+    def __init__(self, initial=[1, 3, 5, 7, 14, 32, 21, 9]):
         """
         Initialize game board.
         Each game board has
@@ -101,13 +101,18 @@ class NimAI():
         Return the Q-value for the state `state` and the action `action`.
         If no Q-value exists yet in `self.q`, return 0.
         """
-        raise NotImplementedError
+        k = (tuple(state), action)
+        if k in self.q:
+            return self.q[k]
+        else:
+            return 0
+        #raise NotImplementedError
 
     def update_q_value(self, state, action, old_q, reward, future_rewards):
         """
         Update the Q-value for the state `state` and the action `action`
         given the previous Q-value `old_q`, a current reward `reward`,
-        and an estiamte of future rewards `future_rewards`.
+        and an estimate of future rewards `future_rewards`.
 
         Use the formula:
 
@@ -118,7 +123,9 @@ class NimAI():
         `alpha` is the learning rate, and `new value estimate`
         is the sum of the current reward and estimated future rewards.
         """
-        raise NotImplementedError
+        k = (tuple(state), action)
+        self.q[k]=old_q + self.alpha*((reward+future_rewards)-old_q)
+        #raise NotImplementedError
 
     def best_future_reward(self, state):
         """
@@ -130,7 +137,15 @@ class NimAI():
         Q-value in `self.q`. If there are no available actions in
         `state`, return 0.
         """
-        raise NotImplementedError
+        x=Nim.available_actions(state)
+        res=0
+        for action in x:
+            k = (tuple(state), action)
+            if k in self.q:
+                res=max(res,self.q[k])
+        return res
+        #raise NotImplementedError
+
 
     def choose_action(self, state, epsilon=True):
         """
@@ -147,7 +162,36 @@ class NimAI():
         If multiple actions have the same Q-value, any of those
         options is an acceptable return value.
         """
-        raise NotImplementedError
+
+        x=list(Nim.available_actions(state))
+        if len(x)==0:
+            return None
+        if (tuple(state),x[0]) in self.q:
+            res = self.q[(tuple(state),x[0])]
+        else:
+            res=0
+        ac = x[0]
+
+        for action in x:
+            k=(tuple(state),action)
+            if k in self.q:
+                if self.q[k] >= res:
+                    res = self.q[k]
+                    ac = action
+            else:
+                if res==0:
+                    ac = action
+        if epsilon is False:
+            return ac
+        else:
+            new=random.choice(list(x))
+            num=random.random()
+            if num<=self.epsilon:
+                return new
+            else:
+                return ac
+
+        #raise NotImplementedError
 
 
 def train(n):
